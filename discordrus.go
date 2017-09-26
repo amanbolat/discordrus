@@ -47,14 +47,17 @@ type Hook struct {
 	MinLevel logrus.Level
 	// Opts contains the options available for the hook
 	Opts *Opts
+	// Asynchronously fire the hook
+	IsAsync bool
 }
 
 // NewHook creates a new instance of a hook, ensures correct string lengths and returns its pointer
-func NewHook(webhookURL string, minLevel logrus.Level, opts *Opts) *Hook {
+func NewHook(webhookURL string, minLevel logrus.Level, isAsync bool, opts *Opts) *Hook {
 	hook := Hook{
 		WebhookURL: webhookURL,
 		MinLevel:   minLevel,
 		Opts:       opts,
+		IsAsync:    isAsync,
 	}
 
 	// Ensure correct username length
@@ -80,12 +83,11 @@ func (hook *Hook) Fire(entry *logrus.Entry) error {
 		return err
 	}
 
-	err = hook.send(webhookObject)
-	if err != nil {
-		return err
+	if hook.IsAsync {
+		go hook.send(webhookObject)
+		return nil
 	}
-
-	return nil
+	return hook.send(webhookObject)
 }
 
 func (hook *Hook) Levels() []logrus.Level {
